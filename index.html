@@ -339,7 +339,7 @@
 
     function created3(data) {
       const width = 900
-      const dy = 250
+      const dy = 400
       const dx = 10
       const tree = d3.tree().nodeSize([dx, dy])
       const margin = {
@@ -408,7 +408,13 @@
           .attr("fill-opacity", 0)
           .attr("stroke-opacity", 0)
           .on("click", (event, d) => {
-            d.children = d.children ? null : d._children;
+            if (d.children) {
+              d._children = d.children
+              d.children = null
+            } else if (d._children) {
+              d.children = d._children
+              d._children = null
+            }
             update(d);
           })
           .on("contextmenu", function(e, d) {
