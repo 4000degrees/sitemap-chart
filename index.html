@@ -172,13 +172,20 @@
       async function getLocal() {
         displayURL = 'local'
         var pathsArrayURL = window.location.origin + window.location.pathname + '/pathsArray.json'
-        fetch(pathsArrayURL).then(response => {
+        fetch(pathsArrayURL,{cache: "no-cache"})
+        .then(response => {
           if (response.ok) {
             response.json().then(json => {
               gotData(json)
             })
+          } else {
+            console.log(response);
+            throw new Error(response.status + ' ' + response.statusText)
           }
 
+        })
+        .catch(err=>{
+          updateStatus(err)
         })
       }
 
