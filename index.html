@@ -85,13 +85,6 @@
   <script>
     'use strict';
 
-    window.addEventListener("load", () => {
-      var urlParam = new URL(window.location.href).searchParams.get("url")
-      if (urlParam) {
-        createSitemapChart(urlParam)
-      }
-    })
-
     const container = document.getElementById("container")
     const urlInput = document.getElementById("urlInput")
     const goButton = document.getElementById("goButton")
@@ -99,6 +92,12 @@
     const unfoldButton = document.getElementById("unfoldButton")
     const useCacheCB = document.getElementById("useCacheCB")
     const statusSpan = document.getElementById("statusSpan")
+
+    var urlParam = new URL(window.location.href).searchParams.get("url")
+    if (urlParam) {
+      createSitemapChart(urlParam)
+      urlInput.value = urlParam
+    }
 
     function handleParams(url) {
       var url = urlInput.value
