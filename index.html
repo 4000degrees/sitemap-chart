@@ -168,14 +168,20 @@
         var data = await Promise.all(sitemapIndexSitemapURLS.map(item => {
           return fetch(item).then((response) => response.json())
         }));
+        var ok = true;
         data.forEach(item => {
           if (item.ok) {
             var sitemapIndeSitemapJSON = parseXML(item.data)
             pathsArray = pathsArray.concat(pathsArray, getURLsFromSitemap(sitemapIndeSitemapJSON))
+          } else {
+            console.log(item.error.split(":").pop());
+            updateStatus(item.error.split(":").pop())
+            ok = false
           }
         });
-
-        gotData(pathsArray)
+        if (ok) {
+          gotData(pathsArray)
+        }
       }
 
       async function getData(url) {
@@ -201,7 +207,6 @@
             getSitemapIndexSitemaps(sitemapIndexJSON)
           } else {
             updateStatus(serverResponceForSitemapIndex.error.split(":").pop())
-
           }
 
         }

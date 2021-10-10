@@ -12,7 +12,7 @@ if (isset($_GET['url'])) {
         )
     )
     );
-    if (($data = @file_get_contents($url)) === false) {
+    if (($data = @file_get_contents($url, false, $context)) === false) {
         $error = error_get_last();
         $responce["ok"] = 0;
         $responce["error"] = $error["message"];
