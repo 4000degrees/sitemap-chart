@@ -183,7 +183,7 @@
         updateStatus("Drawing tree chart")
         created3(JSON.parse(cached))
         document.title = displayURL + " - Sitemap Tree Chart"
-        updateStatus("Using cached sitemap")
+        updateStatus("Using cached sitemap" + cached.urlCount ? cached.urlCount + ' URLs.' : '')
       } else {
         getData(url)
       }
@@ -223,8 +223,9 @@
         var ok = true;
         data.forEach(item => {
           if (item.ok) {
-            var sitemapIndeSitemapJSON = parseXML(item.data)
-            pathsArray = pathsArray.concat(pathsArray, getURLsFromSitemap(sitemapIndeSitemapJSON))
+            const sitemapIndexSitemapJSON = parseXML(item.data)
+            const pathsArrayNext = getURLsFromSitemap(sitemapIndexSitemapJSON)
+            pathsArray = pathsArray.concat(pathsArrayNext)
           } else {
             console.log(item.error.split(":").pop());
             updateStatus(item.error.split(":").pop())
@@ -297,7 +298,7 @@
         created3(tree)
         window.localStorage.setItem(formatedURL, JSON.stringify(tree))
         document.title = displayURL + " - Sitemap Tree Chart"
-        updateStatus("Using fetched sitemap")
+        updateStatus('Using fetched sitemap. ' + tree.urlCount ? tree.urlCount + ' URLs.': '')
       }
 
     }
@@ -305,6 +306,7 @@
     function buildTreeFromPaths(pathsArray) {
       var tree = {
         name: "",
+        urlCount: pathsArray.length,
         parent: "null",
         children: []
       }
