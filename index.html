@@ -139,7 +139,7 @@
         oldSVG.remove()
       }
 
-      if (url == 'local') {
+      if (url == 'local/') {
         getLocal()
         return
       }
@@ -449,8 +449,8 @@
 
         nodeEnter.append("text")
           .attr("dy", "0.31em")
-          .attr("x", d => d._children ? -6 : 6)
-          .attr("text-anchor", d => d._children ? "end" : "start")
+          .attr("x", d => d._children || d.children ? -6 : 6)
+          .attr("text-anchor", d => d._children || d.children ? "end" : "start")
           // .text(d => d.data.name)
           .text(d => {
             const children = d.children || d._children;
@@ -548,6 +548,19 @@
       var zoom = d3.zoom()
         .scaleExtent([0.5, 100])
         .on("zoom", zoomed);
+
+      svg.node().addEventListener('contextmenu', event => event.preventDefault());
+
+      zoom.filter(e => {
+        switch (e.type) {
+          case "wheel":
+            return e.button === 0
+          case "mousedown":
+            return e.button === 2
+          default:
+            return false
+        }
+      })
 
       svg.call(zoom);
 
