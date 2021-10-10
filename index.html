@@ -280,11 +280,10 @@
         var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text)
         pathsArray = pathsArray.map(path => {
           return path
-          .replace(/\r\n/g, '')
-          .replace(/^.*\/\/[^\/]+/, '')
-          .replace('www.', '')
-          .replace(/ /, '')
-          .replace(/-/g, ' ')
+            .replace(/\r\n/g, '')
+            .replace(/^.*\/\/[^\/]+/, '')
+            .replace('www.', '')
+            .replace(/ /, '')
         })
         pathsArray = pathsArray.filter(el => el != "" && el != "/")
         return pathsArray
@@ -490,9 +489,10 @@
           .attr("text-anchor", d => d._children || d.children ? "end" : "start")
           // .text(d => d.data.name)
           .text(d => {
+            let label = d.data.name.replace(/-/g, ' ').replace(/_/g, ' ')
             const children = d.children || d._children;
             const childrenR = +countc(d)
-            return children ? d.data.name + ' (' + children.length + (childrenR !== children.length ? '/' + childrenR : '') + ')' : d.data.name;
+            return children ? label + ' (' + children.length + (childrenR !== children.length ? '/' + childrenR : '') + ')' : label
           })
           .clone(true).lower()
           .attr("stroke-linejoin", "round")
