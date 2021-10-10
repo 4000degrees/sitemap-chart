@@ -93,7 +93,17 @@
     const useCacheCB = document.getElementById("useCacheCB")
     const statusSpan = document.getElementById("statusSpan")
 
+    var useCache = useCacheCB.checked
+
     var urlParam = new URL(window.location.href).searchParams.get("url")
+    var cacheParam = new URL(window.location.href).searchParams.get("cache")
+
+    if (cacheParam) {
+      cacheParam = (cacheParam === 'true')
+      useCache = cacheParam
+      useCacheCB.checked = cacheParam
+    }
+
     if (urlParam) {
       createSitemapChart(urlParam)
       urlInput.value = urlParam
@@ -111,6 +121,7 @@
       var formatedURL = parsedURL.hostname + parsedURL.pathname
       var urlParam = new URL(window.location.href)
       urlParam.searchParams.set("url", formatedURL)
+      urlParam.searchParams.set("cache", useCacheCB.checked)
       window.location.search = urlParam.search
     }
 
@@ -159,7 +170,7 @@
       var formatedURL = parsedURL.hostname + parsedURL.pathname
 
       var cached = window.localStorage.getItem(formatedURL)
-      if (cached && useCacheCB.checked) {
+      if (cached && useCache) {
         updateStatus("Drawing tree chart")
         created3(JSON.parse(cached))
         document.title = displayURL + " - Sitemap Tree Chart"
@@ -255,7 +266,7 @@
       }
 
       function getURLsFromSitemap(xmlJSON) {
-        var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text.replace(/^.*\/\/[^\/]+/, ''))
+        var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text.replace(/^.*\/\/[^\/]+/, '').replace(/-/g, ' '))
         pathsArray = pathsArray.filter(el => el != "" && el != "/")
         return pathsArray
       }
