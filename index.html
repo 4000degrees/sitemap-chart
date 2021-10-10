@@ -58,7 +58,7 @@
       padding: 2px 5px;
       z-index: 10;
       margin: -30px 0 0 15px;
-      opacity: 0.3;
+      opacity: 0.6;
       white-space: nowrap;
     }
 
@@ -303,6 +303,7 @@
 
     const floater = document.getElementById("floater")
     var hideFloater = true
+    var floaterLastElement = null
     floater.addEventListener("mouseover", e => {
       hideFloater = false
     })
@@ -317,17 +318,23 @@
     }, true)
 
     function displayFloater(e, d) {
-      hideFloater = false
-      floater.style.left = e.target.getBoundingClientRect().x + "px"
-      floater.style.top = e.target.getBoundingClientRect().y + "px"
-      var node = d;
-      var url = node.data.name
-      while (node.parent != null) {
-        url = node.parent.data.name + '/' + url
-        node = node.parent
-      }
-      url = parsedURL.origin + url + '/'
-      floater.innerHTML = `<a target="_blank" href="${url}">${url}</a>`
+      floaterLastElement = d
+      setTimeout(() => {
+        if (floaterLastElement == d && hideFloater) {
+          hideFloater = false
+          floater.style.left = e.target.getBoundingClientRect().x + "px"
+          floater.style.top = e.target.getBoundingClientRect().y + "px"
+          var node = d;
+          var url = node.data.name
+          while (node.parent != null) {
+            url = node.parent.data.name + '/' + url
+            node = node.parent
+          }
+          url = "http://" + url + '/'
+          floater.innerHTML = `<a target="_blank" href="${url}">${url}</a>`
+        }
+      }, 1000)
+
     }
 
     function created3(data) {
