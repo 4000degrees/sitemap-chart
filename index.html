@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <title>Sitemap Tree Chart</title>
+
+  <style>
+    body,
+    html {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #container {
+      height: 95vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      /* will-change: transform; */
+    }
+
+    #container svg {
+      height: 100%;
+      width: 100%;
+      /* will-change: transform; */
+    }
+
+    #urlInput {
+      width: 300px;
+    }
+
+
+    .controls {
+      position: relative;
+      z-index: 10;
+    }
+
+    #floater {
+      position: absolute;
+      left: 352px;
+      top: 380px;
+      background: #eee;
+      padding: 2px 5px;
+      z-index: 10;
+      margin: -30px 0 0 15px;
+      opacity: 0.3;
+      white-space: nowrap;
+    }
+
+    #floater a {
+      color: black;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div class="controls">
+    <input id="urlInput" type="text" autocomplete="on" name="" value="" placeholder="URL"><input id="goButton" type="button" name="" value="Go">
+    Use Cache <input type="checkbox" id="useCacheCB" name="" value="" checked>
+    <input id="foldButton" type="button" name="" value="Fold All" onclick="foldAll()"><input id="unfoldButton" type="button" name="" value="Unfold All" onclick="unfoldAll()">
+    <span id="statusSpan"></span>
+  </div>
+  <div id="floater"></div>
+  <div id="container" class="svg-container"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.1.1/d3.min.js" integrity="sha512-COTaPOlz12cG4fSfcBsxZsjauBAyldqp+8FQUM/dZHm+ts/jR4AFoJhCqxy8K10Jrf3pojfsbq7fAPTb1XaVkg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xml-js@1.6.11/dist/xml-js.min.js" integrity="sha256-UBmfOEzHAUdqZzVRQwUVeGvLSWTXgNkxZkA/SbQTSfU=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-zoom@3"></script>
+  <script>
+    'use strict';
+    const container = document.getElementById("container")
+    const urlInput = document.getElementById("urlInput")
+    const goButton = document.getElementById("goButton")
+    const foldButton = document.getElementById("foldButton")
+    const unfoldButton = document.getElementById("unfoldButton")
+    const useCacheCB = document.getElementById("useCacheCB")
+    const statusSpan = document.getElementById("statusSpan")
+    urlInput.addEventListener("keydown", e => {
+      if (e.keyCode === 13) {
+        createSitemapChart(urlInput.value)
+      }
+    })
+    goButton.addEventListener("click", () => {
+      createSitemapChart(urlInput.value)
+    })
+
+    function updateStatus(content) {
+      statusSpan.innerHTML = content
+    }
+
+    var parsedURL
+
+    function createSitemapChart(url) {
+      // url = !url ? window.location.href : url = '//' + url;
+
+      var oldSVG = document.querySelector("#container svg")
+      if (oldSVG) {
+        oldSVG.remove()
+      }
+
+      if (!url) {
+        return
+      }
+      if (!~url.indexOf("://")) {
+        url = location.protocol + "//" + url
+      }
+      var inputURL = url
+      if (!~url.indexOf("/sitemap.xml")) {
+        url = url + '/sitemap.xml'
+      }
+
+      url = window.location.href + '/fetch.php?url=' + url
+
+      parsedURL = new URL(inputURL)
+      var formatedURL = parsedURL.hostname + parsedURL.pathname
+
+      var cached = window.localStorage.getItem(formatedURL)
+      if (cached && useCacheCB.checked) {
+        updateStatus("Drawing tree chart")
+        created3(JSON.parse(cached))
+        document.title = new URL(inputURL).host + " - Sitemap Tree Chart"
+        updateStatus("Using cached sitemap")
+      } else {
+        updateStatus("Fetching sitemap")
+        fetch(url)
+          .then(responce => {
+            if (responce.ok) {
+              responce.text().then(text => {
+                var responceJSON = JSON.parse(text)
+                if (responceJSON.ok) {
+                  updateStatus("Pasrsing XML")
+                  try {
+                    var sitemapJSON = xml2js(responceJSON.data, {
+                      compact: true
+                    })
+                  } catch (e) {
+                    updateStatus("Error parsing sitemap.")
+                  }
+                  updateStatus("Building tree from URLs")
+                  var pathsArray = sitemapJSON.urlset.url.map(el => el.loc._text.replace(/^.*\/\/[^\/]+/, ''))
+                  pathsArray = pathsArray.filter(el => el != "" && el != "/")
+                  var tree = buildTreeFromPaths(pathsArray)
+                  tree.name = parsedURL.hostname
+                  updateStatus("Drawing tree chart")
+                  created3(tree)
+                  window.localStorage.setItem(formatedURL, JSON.stringify(tree))
+                  document.title = new URL(inputURL).host + " - Sitemap Tree Chart"
+                  updateStatus("Using fetched sitemap")
+                } else {
+                  updateStatus(responceJSON.error.split(":").pop())
+                }
+
+              });
+            } else {
+              throw new Error(responce.status)
+            }
+          })
+          .catch(error => {
+            updateStatus(error)
+          });
+      }
+    }
+
+    function buildTreeFromPaths(pathsArray) {
+      var tree = {
+        name: "",
+        parent: "null",
+        children: []
+      }
+      pathsArray.forEach(path => {
+        let parts = path.split("/")
+        var parent
+        if (parts[0] === '') {
+          parts.splice(0, 1)
+        }
+        if (parts[parts.length - 1] === '') {
+          parts.pop()
+        }
+        parts.forEach(part => {
+          if (parent === undefined) parent = tree
+          var current = parent.children.filter(obj => {
+            return obj.name === part
+          })[0]
+          if (!current) {
+            current = {
+              name: part,
+              parent: parent.name,
+              children: []
+            }
+            parent.children.push(current)
+          }
+          parent = current
+        });
+
+      });
+      return tree
+    }
+
+    const floater = document.getElementById("floater")
+    var hideFloater = true
+    floater.addEventListener("mouseover", e => {
+      hideFloater = false
+    })
+    document.body.addEventListener("mouseover", e => {
+      hideFloater = true
+      setTimeout(() => {
+        if (hideFloater) {
+          floater.style.left = -1000 + "px"
+          floater.style.top = -1000 + "px"
+        }
+      }, 400)
+    }, true)
+
+    function displayFloater(e, d) {
+      hideFloater = false
+      floater.style.left = e.target.getBoundingClientRect().x + "px"
+      floater.style.top = e.target.getBoundingClientRect().y + "px"
+      var node = d;
+      var url = node.data.name
+      while (node.parent != null) {
+        url = node.parent.data.name + '/' + url
+        node = node.parent
+      }
+      url = parsedURL.origin + url + '/'
+      floater.innerHTML = `<a target="_blank" href="${url}">${url}</a>`
+    }
+
+    function created3(data) {
+      const width = 900
+      const dy = 250
+      const dx = 10
+      const tree = d3.tree().nodeSize([dx, dy])
+      const margin = {
+        top: 10,
+        right: 120,
+        bottom: 10,
+        left: 100
+      }
+
+      const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x)
+
+      const root = d3.hierarchy(data);
+
+      root.x0 = dy / 2;
+      root.y0 = 0;
+      root.descendants().forEach((d, i) => {
+        d.id = i;
+        d._children = d.children;
+        if (d.depth && d.data.name.length !== 7) d.children = null;
+      });
+
+      const svg = d3.create("svg")
+        .attr("viewBox", [-margin.left, -margin.top, width, dx])
+        .style("font", "10px sans-serif")
+        .style("user-select", "none");
+
+      const gLink = svg.append("g")
+        .attr("fill", "none")
+        .attr("stroke", "#555")
+        .attr("stroke-opacity", 0.4)
+        .attr("stroke-width", 1.5);
+
+      const gNode = svg.append("g")
+        .attr("cursor", "pointer")
+        .attr("pointer-events", "all");
+
+      function update(source) {
+        const duration = d3.event && d3.event.altKey ? 2500 : 250;
+        const nodes = root.descendants().reverse();
+        const links = root.links();
+
+        // Compute the new tree layout.
+        tree(root);
+
+        let left = root;
+        let right = root;
+        root.eachBefore(node => {
+          if (node.x < left.x) left = node;
+          if (node.x > right.x) right = node;
+        });
+
+        const height = right.x - left.x + margin.top + margin.bottom;
+
+        const transition = svg.transition()
+          .duration(duration)
+          .attr("viewBox", [-margin.left, left.x - margin.top, width, height])
+          .tween("resize", window.ResizeObserver ? null : () => () => svg.dispatch("toggle"));
+
+        // Update the nodes…
+        const node = gNode.selectAll("g")
+          .data(nodes, d => d.id);
+
+        // Enter any new nodes at the parent's previous position.
+        const nodeEnter = node.enter().append("g")
+          .attr("transform", d => `translate(${source.y0},${source.x0})`)
+          .attr("fill-opacity", 0)
+          .attr("stroke-opacity", 0)
+          .on("click", (event, d) => {
+            d.children = d.children ? null : d._children;
+            update(d);
+          })
+          .on("contextmenu", function(e, d) {
+            e.preventDefault()
+            if (d.children) {
+              collapse(d)
+            } else {
+              expand(d)
+            }
+            update(d)
+          })
+          .on("mouseover", (e, d) => {
+            displayFloater(e, d)
+          });
+
+        nodeEnter.append("circle")
+          .attr("r", 3.5)
+          .attr("fill", d => d._children ? "#555" : "#999")
+          .attr("stroke-width", 10);
+
+        function countc(node) {
+          const children = node.children || node._children;
+          var c = 0
+          if (children) {
+            c = children.length
+            children.forEach(child => {
+              c += countc(child)
+            })
+          }
+          return c
+        }
+
+        nodeEnter.append("text")
+          .attr("dy", "0.31em")
+          .attr("x", d => d._children ? -6 : 6)
+          .attr("text-anchor", d => d._children ? "end" : "start")
+          // .text(d => d.data.name)
+          .text(d => {
+            const children = d.children || d._children;
+            const childrenR = +countc(d)
+            return children ? d.data.name + ' (' + children.length + (childrenR !== children.length ? '/' + childrenR : '') + ')' : d.data.name;
+          })
+          .clone(true).lower()
+          .attr("stroke-linejoin", "round")
+          .attr("stroke-width", 3)
+          .attr("stroke", "white");
+
+        // Transition nodes to their new position.
+        const nodeUpdate = node.merge(nodeEnter).transition(transition)
+          .attr("transform", d => `translate(${d.y},${d.x})`)
+          .attr("fill-opacity", 1)
+          .attr("stroke-opacity", 1);
+
+        // Transition exiting nodes to the parent's new position.
+        const nodeExit = node.exit().transition(transition).remove()
+          .attr("transform", d => `translate(${source.y},${source.x})`)
+          .attr("fill-opacity", 0)
+          .attr("stroke-opacity", 0);
+
+        // Update the links…
+        const link = gLink.selectAll("path")
+          .data(links, d => d.target.id);
+
+        // Enter any new links at the parent's previous position.
+        const linkEnter = link.enter().append("path")
+          .attr("d", d => {
+            const o = {
+              x: source.x0,
+              y: source.y0
+            };
+            return diagonal({
+              source: o,
+              target: o
+            });
+          });
+
+        // Transition links to their new position.
+        link.merge(linkEnter).transition(transition)
+          .attr("d", diagonal);
+
+        // Transition exiting nodes to the parent's new position.
+        link.exit().transition(transition).remove()
+          .attr("d", d => {
+            const o = {
+              x: source.x,
+              y: source.y
+            };
+            return diagonal({
+              source: o,
+              target: o
+            });
+          });
+
+        // Stash the old positions for transition.
+        root.eachBefore(d => {
+          d.x0 = d.x;
+          d.y0 = d.y;
+        });
+
+      }
+
+      update(root);
+
+      function collapse(d) {
+        if (d.children) {
+          d._children = d.children;
+          d._children.forEach(collapse);
+          d.children = null;
+        }
+      }
+
+      function expand(d) {
+        if (d._children) {
+          d.children = d._children;
+          d.children.forEach(expand);
+          d._children = null;
+        }
+      }
+
+      window["unfoldAll"] = function unfoldAll() {
+        expand(root);
+        update(root);
+      }
+
+      window["foldAll"] = function foldAll() {
+        root.children.forEach(collapse);
+        // collapse(root);
+        update(root);
+      }
+
+      var zoom = d3.zoom()
+        .scaleExtent([0.5, 100])
+        .on("zoom", zoomed);
+
+      svg.call(zoom);
+
+      function zoomed({
+        transform
+      }) {
+        gNode.attr("transform", transform);
+        gLink.attr("transform", transform);
+      }
+
+      update()
+      container.appendChild(svg.node())
+    }
+  </script>
+
+</body>
+
+</html>
