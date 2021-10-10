@@ -71,7 +71,8 @@
 
 <body>
   <div class="controls">
-    <input id="urlInput" type="text" autocomplete="on" name="" value="" placeholder="URL"><input id="goButton" type="button" name="" value="Go">
+    <input id="urlInput" type="text" autocomplete="on" name="" value="" placeholder="URL">
+    <input id="goButton" type="button" name="" value="Go">
     Use Cache <input type="checkbox" id="useCacheCB" name="" value="" checked>
     <input id="foldButton" type="button" name="" value="Fold All" onclick="foldAll()"><input id="unfoldButton" type="button" name="" value="Unfold All" onclick="unfoldAll()">
     <span id="statusSpan"></span>
@@ -113,6 +114,14 @@
         oldSVG.remove()
       }
 
+      if (url == 'local') {
+        getLocal()
+
+        return
+      }
+
+
+
       if (!url) {
         return
       }
@@ -120,9 +129,10 @@
         url = location.protocol + "//" + url
       }
       var inputURL = url
-      var fetcherURL = window.location.href + 'fetch.php?url='
+      var fetcherURL = window.location.origin + window.location.pathname + 'fetch.php?url='
 
       parsedURL = new URL(inputURL)
+      var displayURL = parsedURL.hostname
       var formatedURL = parsedURL.hostname + parsedURL.pathname
 
       var cached = window.localStorage.getItem(formatedURL)
@@ -135,6 +145,19 @@
         getData(url)
       }
 
+
+      async function getLocal() {
+        displayURL = 'local'
+        var pathsArrayURL = window.location.origin + window.location.pathname + '/pathsArray.json'
+        fetch(pathsArrayURL).then(response => {
+          if (response.ok) {
+            response.json().then(json => {
+              gotData(json)
+            })
+          }
+
+        })
+      }
 
       async function getSitemapIndexSitemaps(sitemapIndexJSON) {
         var pathsArray = []
@@ -170,16 +193,12 @@
             getSitemapIndexSitemaps(sitemapJSON)
           }
         } else {
-          updateStatus(serverResponceForSitemap.error.split(":").pop())
-          updateStatus("Fetching siteindex")
+          updateStatus(`Fetching sitemap index. Sitemap error: ${serverResponceForSitemap.error.split(":").pop()}`)
           var sitemapIndexURL = fetcherURL + url + '/sitemap_index.xml'
-          console.log(sitemapIndexURL);
           const serverResponceForSitemapIndex = await (await fetch(sitemapIndexURL)).json()
           if (serverResponceForSitemapIndex.ok) {
-            console.log("got index");
             const sitemapIndexJSON = parseXML(serverResponceForSitemapIndex.data)
             getSitemapIndexSitemaps(sitemapIndexJSON)
-
           } else {
             updateStatus(serverResponceForSitemapIndex.error.split(":").pop())
 
@@ -209,11 +228,11 @@
       function gotData(pathsArray) {
         updateStatus("Building tree from URLs")
         var tree = buildTreeFromPaths(pathsArray)
-        tree.name = parsedURL.hostname
+        tree.name = displayURL
         updateStatus("Drawing tree chart")
         created3(tree)
         window.localStorage.setItem(formatedURL, JSON.stringify(tree))
-        document.title = new URL(inputURL).host + " - Sitemap Tree Chart"
+        document.title = displayURL + " - Sitemap Tree Chart"
         updateStatus("Using fetched sitemap")
       }
 
