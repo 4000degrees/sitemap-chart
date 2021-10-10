@@ -84,6 +84,14 @@
   <script src="https://cdn.jsdelivr.net/npm/d3-zoom@3"></script>
   <script>
     'use strict';
+
+    window.addEventListener("load", () => {
+      var urlParam = new URL(window.location.href).searchParams.get("url")
+      if (urlParam) {
+        createSitemapChart(urlParam)
+      }
+    })
+
     const container = document.getElementById("container")
     const urlInput = document.getElementById("urlInput")
     const goButton = document.getElementById("goButton")
@@ -91,13 +99,31 @@
     const unfoldButton = document.getElementById("unfoldButton")
     const useCacheCB = document.getElementById("useCacheCB")
     const statusSpan = document.getElementById("statusSpan")
+
+    function handleParams(url) {
+      var url = urlInput.value
+      if (!url) {
+        return
+      }
+      if (!~url.indexOf("://")) {
+        url = location.protocol + "//" + url
+      }
+      parsedURL = new URL(url)
+      var formatedURL = parsedURL.hostname + parsedURL.pathname
+      var urlParam = new URL(window.location.href)
+      urlParam.searchParams.set("url", formatedURL)
+      window.location.search = urlParam.search
+    }
+
     urlInput.addEventListener("keydown", e => {
       if (e.keyCode === 13) {
-        createSitemapChart(urlInput.value)
+        handleParams()
+        // createSitemapChart(urlInput.value)
       }
     })
     goButton.addEventListener("click", () => {
-      createSitemapChart(urlInput.value)
+      handleParams()
+      // createSitemapChart(urlInput.value)
     })
 
     function updateStatus(content) {
@@ -116,22 +142,20 @@
 
       if (url == 'local') {
         getLocal()
-
         return
       }
-
-
 
       if (!url) {
         return
       }
+
       if (!~url.indexOf("://")) {
         url = location.protocol + "//" + url
       }
-      var inputURL = url
+
       var fetcherURL = window.location.origin + window.location.pathname + 'fetch.php?url='
 
-      parsedURL = new URL(inputURL)
+      parsedURL = new URL(url)
       var displayURL = parsedURL.hostname
       var formatedURL = parsedURL.hostname + parsedURL.pathname
 
@@ -139,7 +163,7 @@
       if (cached && useCacheCB.checked) {
         updateStatus("Drawing tree chart")
         created3(JSON.parse(cached))
-        document.title = new URL(inputURL).host + " - Sitemap Tree Chart"
+        document.title = displayURL + " - Sitemap Tree Chart"
         updateStatus("Using cached sitemap")
       } else {
         getData(url)
