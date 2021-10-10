@@ -277,7 +277,15 @@
       }
 
       function getURLsFromSitemap(xmlJSON) {
-        var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text.replace(/^.*\/\/[^\/]+/, '').replace(/-/g, ' '))
+        var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text)
+        pathsArray = pathsArray.map(path => {
+          return path
+          .replace(/\r\n/g, '')
+          .replace(/^.*\/\/[^\/]+/, '')
+          .replace('www.', '')
+          .replace(/ /, '')
+          .replace(/-/g, ' ')
+        })
         pathsArray = pathsArray.filter(el => el != "" && el != "/")
         return pathsArray
       }
