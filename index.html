@@ -85,18 +85,18 @@
   <script>
     'use strict';
 
-    const container = document.getElementById("container")
-    const urlInput = document.getElementById("urlInput")
-    const goButton = document.getElementById("goButton")
-    const foldButton = document.getElementById("foldButton")
-    const unfoldButton = document.getElementById("unfoldButton")
-    const useCacheCB = document.getElementById("useCacheCB")
-    const statusSpan = document.getElementById("statusSpan")
+    const container = document.getElementById('container')
+    const urlInput = document.getElementById('urlInput')
+    const goButton = document.getElementById('goButton')
+    const foldButton = document.getElementById('foldButton')
+    const unfoldButton = document.getElementById('unfoldButton')
+    const useCacheCB = document.getElementById('useCacheCB')
+    const statusSpan = document.getElementById('statusSpan')
 
     var useCache = useCacheCB.checked
 
-    var urlParam = new URL(window.location.href).searchParams.get("url")
-    var cacheParam = new URL(window.location.href).searchParams.get("cache")
+    var urlParam = new URL(window.location.href).searchParams.get('url')
+    var cacheParam = new URL(window.location.href).searchParams.get('cache')
 
     if (cacheParam) {
       cacheParam = (cacheParam === 'true')
@@ -110,8 +110,8 @@
     }
 
     function prepareUrl(url) {
-      if (!~url.indexOf("://")) {
-        url = location.protocol + "//" + url
+      if (!~url.indexOf('://')) {
+        url = location.protocol + '//' + url
       }
       url = url.replace('www.', '')
       return url
@@ -126,18 +126,18 @@
       parsedURL = new URL(url)
       var formatedURL = parsedURL.hostname + parsedURL.pathname
       var urlParam = new URL(window.location.href)
-      urlParam.searchParams.set("url", formatedURL)
-      urlParam.searchParams.set("cache", useCacheCB.checked)
+      urlParam.searchParams.set('url', formatedURL)
+      urlParam.searchParams.set('cache', useCacheCB.checked)
       window.history.replaceState('', document.title, urlParam);
     }
 
-    urlInput.addEventListener("keydown", e => {
+    urlInput.addEventListener('keydown', e => {
       if (e.keyCode === 13) {
         handleParams()
         createSitemapChart(urlInput.value)
       }
     })
-    goButton.addEventListener("click", () => {
+    goButton.addEventListener('click', () => {
       handleParams()
       createSitemapChart(urlInput.value)
     })
@@ -156,7 +156,7 @@
     function createSitemapChart(url) {
       // url = !url ? window.location.href : url = '//' + url;
 
-      var oldSVG = document.querySelector("#container svg")
+      var oldSVG = document.querySelector('#container svg')
       if (oldSVG) {
         oldSVG.remove()
       }
@@ -180,10 +180,11 @@
 
       var cached = window.localStorage.getItem(formatedURL)
       if (cached && useCache) {
-        updateStatus("Drawing tree chart")
-        created3(JSON.parse(cached))
-        document.title = displayURL + " - Sitemap Tree Chart"
-        updateStatus("Using cached sitemap" + cached.urlCount ? cached.urlCount + ' URLs.' : '')
+        const tree = JSON.parse(cached)
+        updateStatus('Drawing tree chart')
+        created3(tree)
+        document.title = displayURL + ' - Sitemap Tree Chart'
+        updateStatus('Using cached sitemap.' + (tree.urlCount ? ' ' + tree.urlCount + ' URLs.' : ''))
       } else {
         getData(url)
       }
@@ -193,7 +194,7 @@
         displayURL = 'local'
         var pathsArrayURL = window.location.origin + window.location.pathname + '/pathsArray.json'
         fetch(pathsArrayURL, {
-            cache: "no-cache"
+            cache: 'no-cache'
           })
           .then(response => {
             if (response.ok) {
@@ -216,7 +217,7 @@
         const sitemapIndexSitemapURLS = sitemapIndexJSON.sitemapindex.sitemap.map(item => {
           return fetcherURL + item.loc._text
         })
-        updateStatus("Fetching sitemaps from sitemap index")
+        updateStatus('Fetching sitemaps from sitemap index')
         var data = await Promise.all(sitemapIndexSitemapURLS.map(item => {
           return fetch(item).then((response) => response.json())
         }));
@@ -227,8 +228,8 @@
             const pathsArrayNext = getURLsFromSitemap(sitemapIndexSitemapJSON)
             pathsArray = pathsArray.concat(pathsArrayNext)
           } else {
-            console.log(item.error.split(":").pop());
-            updateStatus(item.error.split(":").pop())
+            console.log(item.error.split(':').pop());
+            updateStatus(item.error.split(':').pop())
             ok = false
           }
         });
@@ -238,7 +239,7 @@
       }
 
       async function getData(url) {
-        updateStatus("Fetching sitemap")
+        updateStatus('Fetching sitemap')
         var sitemapURL = fetcherURL + url + '/sitemap.xml'
         var pathsArray
         const serverResponceForSitemap = await (await fetch(sitemapURL)).json()
@@ -252,14 +253,14 @@
             getSitemapIndexSitemaps(sitemapJSON)
           }
         } else {
-          updateStatus(`Fetching sitemap index. Sitemap error: ${serverResponceForSitemap.error.split(":").pop()}`)
+          updateStatus(`Fetching sitemap index. Sitemap error: ${serverResponceForSitemap.error.split(':').pop()}`)
           var sitemapIndexURL = fetcherURL + url + '/sitemap_index.xml'
           const serverResponceForSitemapIndex = await (await fetch(sitemapIndexURL)).json()
           if (serverResponceForSitemapIndex.ok) {
             const sitemapIndexJSON = parseXML(serverResponceForSitemapIndex.data)
             getSitemapIndexSitemaps(sitemapIndexJSON)
           } else {
-            updateStatus(serverResponceForSitemapIndex.error.split(":").pop())
+            updateStatus(serverResponceForSitemapIndex.error.split(':').pop())
           }
 
         }
@@ -286,32 +287,32 @@
             .replace('www.', '')
             .replace(/ /, '')
         })
-        pathsArray = pathsArray.filter(el => el != "" && el != "/")
+        pathsArray = pathsArray.filter(el => el != '' && el != '/')
         return pathsArray
       }
 
       function gotData(pathsArray) {
-        updateStatus("Building tree from URLs")
+        updateStatus('Building tree from URLs')
         var tree = buildTreeFromPaths(pathsArray)
         tree.name = displayURL
-        updateStatus("Drawing tree chart")
+        updateStatus('Drawing tree chart')
         created3(tree)
         window.localStorage.setItem(formatedURL, JSON.stringify(tree))
-        document.title = displayURL + " - Sitemap Tree Chart"
-        updateStatus('Using fetched sitemap. ' + tree.urlCount ? tree.urlCount + ' URLs.': '')
+        document.title = displayURL + ' - Sitemap Tree Chart'
+        updateStatus('Using fetched sitemap. ' + (tree.urlCount ? ' ' + tree.urlCount + ' URLs.' : ''))
       }
 
     }
 
     function buildTreeFromPaths(pathsArray) {
       var tree = {
-        name: "",
+        name: '',
         urlCount: pathsArray.length,
-        parent: "null",
+        parent: 'null',
         children: []
       }
       pathsArray.forEach(path => {
-        let parts = path.split("/")
+        let parts = path.split('/')
         var parent
         if (parts[0] === '') {
           parts.splice(0, 1)
@@ -339,18 +340,18 @@
       return tree
     }
 
-    const floater = document.getElementById("floater")
+    const floater = document.getElementById('floater')
     var hideFloater = true
     var floaterLastElement = null
-    floater.addEventListener("mouseover", e => {
+    floater.addEventListener('mouseover', e => {
       hideFloater = false
     })
-    document.body.addEventListener("mouseover", e => {
+    document.body.addEventListener('mouseover', e => {
       hideFloater = true
       setTimeout(() => {
         if (hideFloater) {
-          floater.style.left = -1000 + "px"
-          floater.style.top = -1000 + "px"
+          floater.style.left = -1000 + 'px'
+          floater.style.top = -1000 + 'px'
         }
       }, 400)
     }, true)
@@ -360,16 +361,16 @@
       setTimeout(() => {
         if (floaterLastElement == d && hideFloater) {
           hideFloater = false
-          floater.style.left = e.target.getBoundingClientRect().x + "px"
-          floater.style.top = e.target.getBoundingClientRect().y + "px"
+          floater.style.left = e.target.getBoundingClientRect().x + 'px'
+          floater.style.top = e.target.getBoundingClientRect().y + 'px'
           var node = d;
           var url = node.data.name
           while (node.parent != null) {
             url = node.parent.data.name + '/' + url
             node = node.parent
           }
-          url = "http://" + url + '/'
-          floater.innerHTML = `<a target="_blank" href="${url}">${url}</a>`
+          url = 'http://' + url + '/'
+          floater.innerHTML = `<a target='_blank' href='${url}'>${url}</a>`
         }
       }, 1000)
 
@@ -399,20 +400,20 @@
         if (d.depth && d.data.name.length !== 7) d.children = null;
       });
 
-      const svg = d3.create("svg")
-        .attr("viewBox", [-margin.left, -margin.top, width, dx])
-        .style("font", "10px sans-serif")
-        .style("user-select", "none");
+      const svg = d3.create('svg')
+        .attr('viewBox', [-margin.left, -margin.top, width, dx])
+        .style('font', '10px sans-serif')
+        .style('user-select', 'none');
 
-      const gLink = svg.append("g")
-        .attr("fill", "none")
-        .attr("stroke", "#555")
-        .attr("stroke-opacity", 0.4)
-        .attr("stroke-width", 1.5);
+      const gLink = svg.append('g')
+        .attr('fill', 'none')
+        .attr('stroke', '#555')
+        .attr('stroke-opacity', 0.4)
+        .attr('stroke-width', 1.5);
 
-      const gNode = svg.append("g")
-        .attr("cursor", "pointer")
-        .attr("pointer-events", "all");
+      const gNode = svg.append('g')
+        .attr('cursor', 'pointer')
+        .attr('pointer-events', 'all');
 
       function update(source) {
         const duration = d3.event && d3.event.altKey ? 2500 : 250;
@@ -433,19 +434,19 @@
 
         const transition = svg.transition()
           .duration(duration)
-          .attr("viewBox", [-margin.left, left.x - margin.top, width, height])
-          .tween("resize", window.ResizeObserver ? null : () => () => svg.dispatch("toggle"));
+          .attr('viewBox', [-margin.left, left.x - margin.top, width, height])
+          .tween('resize', window.ResizeObserver ? null : () => () => svg.dispatch('toggle'));
 
         // Update the nodes…
-        const node = gNode.selectAll("g")
+        const node = gNode.selectAll('g')
           .data(nodes, d => d.id);
 
         // Enter any new nodes at the parent's previous position.
-        const nodeEnter = node.enter().append("g")
-          .attr("transform", d => `translate(${source.y0},${source.x0})`)
-          .attr("fill-opacity", 0)
-          .attr("stroke-opacity", 0)
-          .on("click", (event, d) => {
+        const nodeEnter = node.enter().append('g')
+          .attr('transform', d => `translate(${source.y0},${source.x0})`)
+          .attr('fill-opacity', 0)
+          .attr('stroke-opacity', 0)
+          .on('click', (event, d) => {
             if (d.children) {
               d._children = d.children
               d.children = null
@@ -455,7 +456,7 @@
             }
             update(d);
           })
-          .on("contextmenu", function(e, d) {
+          .on('contextmenu', function(e, d) {
             e.preventDefault()
             if (d.children) {
               collapse(d)
@@ -464,14 +465,14 @@
             }
             update(d)
           })
-          .on("mouseover", (e, d) => {
+          .on('mouseover', (e, d) => {
             displayFloater(e, d)
           });
 
-        nodeEnter.append("circle")
-          .attr("r", 3.5)
-          .attr("fill", d => d._children ? "#555" : "#999")
-          .attr("stroke-width", 10);
+        nodeEnter.append('circle')
+          .attr('r', 3.5)
+          .attr('fill', d => d._children ? '#555' : '#999')
+          .attr('stroke-width', 10);
 
         function countc(node) {
           const children = node.children || node._children;
@@ -485,10 +486,10 @@
           return c
         }
 
-        nodeEnter.append("text")
-          .attr("dy", "0.31em")
-          .attr("x", d => d._children || d.children ? -6 : 6)
-          .attr("text-anchor", d => d._children || d.children ? "end" : "start")
+        nodeEnter.append('text')
+          .attr('dy', '0.31em')
+          .attr('x', d => d._children || d.children ? -6 : 6)
+          .attr('text-anchor', d => d._children || d.children ? 'end' : 'start')
           // .text(d => d.data.name)
           .text(d => {
             let label = d.data.name.replace(/-/g, ' ').replace(/_/g, ' ')
@@ -497,29 +498,29 @@
             return children ? label + ' (' + children.length + (childrenR !== children.length ? '/' + childrenR : '') + ')' : label
           })
           .clone(true).lower()
-          .attr("stroke-linejoin", "round")
-          .attr("stroke-width", 3)
-          .attr("stroke", "white");
+          .attr('stroke-linejoin', 'round')
+          .attr('stroke-width', 3)
+          .attr('stroke', 'white');
 
         // Transition nodes to their new position.
         const nodeUpdate = node.merge(nodeEnter).transition(transition)
-          .attr("transform", d => `translate(${d.y},${d.x})`)
-          .attr("fill-opacity", 1)
-          .attr("stroke-opacity", 1);
+          .attr('transform', d => `translate(${d.y},${d.x})`)
+          .attr('fill-opacity', 1)
+          .attr('stroke-opacity', 1);
 
         // Transition exiting nodes to the parent's new position.
         const nodeExit = node.exit().transition(transition).remove()
-          .attr("transform", d => `translate(${source.y},${source.x})`)
-          .attr("fill-opacity", 0)
-          .attr("stroke-opacity", 0);
+          .attr('transform', d => `translate(${source.y},${source.x})`)
+          .attr('fill-opacity', 0)
+          .attr('stroke-opacity', 0);
 
         // Update the links…
-        const link = gLink.selectAll("path")
+        const link = gLink.selectAll('path')
           .data(links, d => d.target.id);
 
         // Enter any new links at the parent's previous position.
-        const linkEnter = link.enter().append("path")
-          .attr("d", d => {
+        const linkEnter = link.enter().append('path')
+          .attr('d', d => {
             const o = {
               x: source.x0,
               y: source.y0
@@ -532,11 +533,11 @@
 
         // Transition links to their new position.
         link.merge(linkEnter).transition(transition)
-          .attr("d", diagonal);
+          .attr('d', diagonal);
 
         // Transition exiting nodes to the parent's new position.
         link.exit().transition(transition).remove()
-          .attr("d", d => {
+          .attr('d', d => {
             const o = {
               x: source.x,
               y: source.y
@@ -573,12 +574,12 @@
         }
       }
 
-      window["unfoldAll"] = function unfoldAll() {
+      window['unfoldAll'] = function unfoldAll() {
         expand(root);
         update(root);
       }
 
-      window["foldAll"] = function foldAll() {
+      window['foldAll'] = function foldAll() {
         root.children.forEach(collapse);
         // collapse(root);
         update(root);
@@ -586,15 +587,15 @@
 
       var zoom = d3.zoom()
         .scaleExtent([0.5, 100])
-        .on("zoom", zoomed);
+        .on('zoom', zoomed);
 
       svg.node().addEventListener('contextmenu', event => event.preventDefault());
 
       zoom.filter(e => {
         switch (e.type) {
-          case "wheel":
+          case 'wheel':
             return e.button === 0
-          case "mousedown":
+          case 'mousedown':
             return e.button === 2
           default:
             return false
@@ -606,8 +607,8 @@
       function zoomed({
         transform
       }) {
-        gNode.attr("transform", transform);
-        gLink.attr("transform", transform);
+        gNode.attr('transform', transform);
+        gLink.attr('transform', transform);
       }
 
       update()
