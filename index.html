@@ -109,14 +109,20 @@
       urlInput.value = urlParam
     }
 
+    function prepareUrl(url) {
+      if (!~url.indexOf("://")) {
+        url = location.protocol + "//" + url
+      }
+      url = url.replace('www.','')
+      return url
+    }
+
     function handleParams(url) {
       var url = urlInput.value
       if (!url) {
         return
       }
-      if (!~url.indexOf("://")) {
-        url = location.protocol + "//" + url
-      }
+      url = prepareUrl(url)
       parsedURL = new URL(url)
       var formatedURL = parsedURL.hostname + parsedURL.pathname
       var urlParam = new URL(window.location.href)
@@ -159,9 +165,7 @@
         return
       }
 
-      if (!~url.indexOf("://")) {
-        url = location.protocol + "//" + url
-      }
+      url = prepareUrl(url)
 
       var fetcherURL = window.location.origin + window.location.pathname + 'fetch.php?url='
 
