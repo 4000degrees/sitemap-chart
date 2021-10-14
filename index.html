@@ -591,16 +591,16 @@
 
       svg.node().addEventListener('contextmenu', event => event.preventDefault());
 
-      zoom.filter(e => {
-        switch (e.type) {
-          case 'wheel':
-            return e.button === 0
-          case 'mousedown':
-            return e.button === 2
-          default:
-            return false
-        }
-      })
+      // zoom.filter(e => {
+      //   switch (e.type) {
+      //     case 'wheel':
+      //       return e.button === 0
+      //     case 'mousedown':
+      //       return e.button === 2
+      //     default:
+      //       return false
+      //   }
+      // })
 
       svg.call(zoom);
 
