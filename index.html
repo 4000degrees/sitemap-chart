@@ -85,7 +85,9 @@
     <input id="goButton" type="button" name="" value="Go">
     Use Cache <input type="checkbox" id="useCacheCB" name="" value="" checked>
     Force HTTPS <input type="checkbox" id="forceHTTPSCB" name="" value="" checked>
-    <input id="foldButton" type="button" name="" value="Fold All" onclick="foldAll()"><input id="unfoldButton" type="button" name="" value="Unfold All" onclick="unfoldAll()">
+    <input id="foldButton" type="button" name="" value="Fold All" onclick="foldAll()">
+    <input id="unfoldButton" type="button" name="" value="Unfold All" onclick="unfoldAll()">
+    <input id="resetZoomBtn" type="button" name="" value="Reset Zoom" onclick="resetZoom()">
     <span id="statusSpan" onclick="statusHistory.style.display === 'block' ? statusHistory.style.display = 'none' : statusHistory.style.display = 'block'"></span>
     <div id="statusHistory"></div>
   </div>
@@ -100,6 +102,7 @@
     const container = document.getElementById('container')
     const urlInput = document.getElementById('urlInput')
     const goButton = document.getElementById('goButton')
+    const resetZoomBtn = document.getElementById('resetZoomBtn')
     const foldButton = document.getElementById('foldButton')
     const unfoldButton = document.getElementById('unfoldButton')
     const useCacheCB = document.getElementById('useCacheCB')
@@ -475,6 +478,36 @@
         .attr('cursor', 'pointer')
         .attr('pointer-events', 'all');
 
+      var zoom = d3.zoom()
+        .scaleExtent([0.5, 100])
+        .on('zoom', zoomed);
+
+      svg.node().addEventListener('contextmenu', event => event.preventDefault());
+
+      // zoom.filter(e => {
+      //   switch (e.type) {
+      //     case 'wheel':
+      //       return e.button === 0
+      //     case 'mousedown':
+      //       return e.button === 2
+      //     default:
+      //       return false
+      //   }
+      // })
+
+      svg.call(zoom);
+
+      function zoomed(event) {
+        const zoomSelection = d3.selectAll('svg > g')
+        zoomSelection.attr('transform', event.transform);
+      }
+
+      function resetZoom(el) {
+        svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+      }
+
+      window.resetZoom = resetZoom
+
       function update(source) {
         const duration = d3.event && d3.event.altKey ? 2500 : 250;
         const nodes = root.descendants().reverse();
@@ -614,7 +647,6 @@
           d.x0 = d.x;
           d.y0 = d.y;
         });
-
       }
 
       update(root);
@@ -646,31 +678,6 @@
         update(root);
       }
 
-      var zoom = d3.zoom()
-        .scaleExtent([0.5, 100])
-        .on('zoom', zoomed);
-
-      svg.node().addEventListener('contextmenu', event => event.preventDefault());
-
-      // zoom.filter(e => {
-      //   switch (e.type) {
-      //     case 'wheel':
-      //       return e.button === 0
-      //     case 'mousedown':
-      //       return e.button === 2
-      //     default:
-      //       return false
-      //   }
-      // })
-
-      svg.call(zoom);
-
-      function zoomed({
-        transform
-      }) {
-        gNode.attr('transform', transform);
-        gLink.attr('transform', transform);
-      }
 
       update()
       container.appendChild(svg.node())
