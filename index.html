@@ -552,6 +552,7 @@
           // .text(d => d.data.name)
           .text(d => {
             let label = d.data.name.replace(/-/g, ' ').replace(/_/g, ' ')
+            label = decodeURIComponent(label)
             const children = d.children || d._children;
             const childrenR = +countc(d)
             return children ? label + ' (' + children.length + (childrenR !== children.length ? '/' + childrenR : '') + ')' : label
