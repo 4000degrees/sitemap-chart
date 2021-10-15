@@ -264,7 +264,6 @@
           })
         }));
         data = data.filter(item => item)
-        console.log(data);
         data.forEach(item => {
           const data = item.json.data
           const sitemapIndexSitemapJSON = parseXML(data)
@@ -295,6 +294,8 @@
           } else if (sitemapJSON.sitemapindex) {
             updateStatus('It is not a sitemap but a sitemap index')
             getSitemapIndexSitemaps(sitemapJSON)
+          } else {
+            updateStatus('Invalid sitemap')
           }
         } else {
           updateStatus('Sitemap error: ' + serverResponceForSitemap.error.split(':').pop())
