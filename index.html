@@ -65,6 +65,16 @@
     #floater a {
       color: black;
     }
+
+    #statusHistory {
+      background: #eee;
+      width: 700px;
+      height: 300px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      padding: 10px;
+      display: none;
+    }
   </style>
 
 </head>
@@ -74,8 +84,10 @@
     <input id="urlInput" type="text" autocomplete="on" name="" value="" placeholder="URL">
     <input id="goButton" type="button" name="" value="Go">
     Use Cache <input type="checkbox" id="useCacheCB" name="" value="" checked>
+    Force HTTPS <input type="checkbox" id="forceHTTPSCB" name="" value="" checked>
     <input id="foldButton" type="button" name="" value="Fold All" onclick="foldAll()"><input id="unfoldButton" type="button" name="" value="Unfold All" onclick="unfoldAll()">
-    <span id="statusSpan"></span>
+    <span id="statusSpan" onclick="statusHistory.style.display === 'block' ? statusHistory.style.display = 'none' : statusHistory.style.display = 'block'"></span>
+    <div id="statusHistory"></div>
   </div>
   <div id="floater"></div>
   <div id="container" class="svg-container"></div>
@@ -92,16 +104,25 @@
     const unfoldButton = document.getElementById('unfoldButton')
     const useCacheCB = document.getElementById('useCacheCB')
     const statusSpan = document.getElementById('statusSpan')
+    const statusHistory = document.getElementById('statusHistory')
+    const forceHTTPSCB = document.getElementById('forceHTTPSCB')
 
+    var forceHTTPS = forceHTTPSCB.checked
     var useCache = useCacheCB.checked
 
     var urlParam = new URL(window.location.href).searchParams.get('url')
     var cacheParam = new URL(window.location.href).searchParams.get('cache')
+    var forceHTTPSParam = new URL(window.location.href).searchParams.get('forcehttps')
+
 
     if (cacheParam) {
-      cacheParam = (cacheParam === 'true')
-      useCache = cacheParam
-      useCacheCB.checked = cacheParam
+      useCache = (cacheParam === 'true')
+      useCacheCB.checked = useCache
+    }
+
+    if (forceHTTPSParam) {
+      forceHTTPS = (forceHTTPSParam === 'true')
+      forceHTTPSCB.checked = forceHTTPS
     }
 
     if (urlParam) {
@@ -110,8 +131,9 @@
     }
 
     function prepareUrl(url) {
+      const protocol = forceHTTPS ? 'https:' : location.protocol
       if (!~url.indexOf('://')) {
-        url = location.protocol + '//' + url
+        url = protocol + '//' + url
       }
       url = url.replace('www.', '')
       return url
@@ -148,6 +170,7 @@
     })
 
     function updateStatus(content) {
+      statusHistory.innerHTML += content + '<br>'
       statusSpan.innerHTML = content
     }
 
@@ -162,6 +185,7 @@
       }
 
       if (url == 'local/') {
+        updateStatus("Loading local pathsJson")
         getLocal()
         return
       }
@@ -180,11 +204,11 @@
 
       var cached = window.localStorage.getItem(formatedURL)
       if (cached && useCache) {
+        updateStatus('Using cached sitemap')
         const tree = JSON.parse(cached)
-        updateStatus('Drawing tree chart')
         created3(tree)
         document.title = displayURL + ' - Sitemap Tree Chart'
-        updateStatus('Using cached sitemap.' + (tree.urlCount ? ' ' + tree.urlCount + ' URLs.' : ''))
+        updateStatus(tree.urlCount + ' URLs')
       } else {
         getData(url)
       }
@@ -202,7 +226,6 @@
                 gotData(json)
               })
             } else {
-              console.log(response);
               throw new Error(response.status + ' ' + response.statusText)
             }
 
@@ -214,60 +237,85 @@
 
       async function getSitemapIndexSitemaps(sitemapIndexJSON) {
         var pathsArray = []
+        if (!sitemapIndexJSON) {
+          return
+        }
         const sitemapIndexSitemapURLS = sitemapIndexJSON.sitemapindex.sitemap.map(item => {
-          return fetcherURL + item.loc._text
+          var url = item.loc._text
+          if (forceHTTPS) {
+            url = url.replace('http:', 'https:')
+          }
+          return url
         })
         updateStatus('Fetching sitemaps from sitemap index')
         var data = await Promise.all(sitemapIndexSitemapURLS.map(item => {
-          return fetch(item).then((response) => response.json())
+          const fetcherSitemapURL = fetcherURL + item
+          return fetch(fetcherSitemapURL).then(async (response) => {
+            const json = await response.json()
+            if (json.ok) {
+              updateStatus('Fetched ' + item)
+              return {
+                url: item,
+                json
+              }
+            } else {
+              updateStatus('Error fetching ' + item + ': ' + json.error.split(':').pop())
+            }
+          })
         }));
-        var ok = true;
+        data = data.filter(item => item)
+        console.log(data);
         data.forEach(item => {
-          if (item.ok) {
-            const sitemapIndexSitemapJSON = parseXML(item.data)
-            const pathsArrayNext = getURLsFromSitemap(sitemapIndexSitemapJSON)
-            pathsArray = pathsArray.concat(pathsArrayNext)
-          } else {
-            console.log(item.error.split(':').pop());
-            updateStatus(item.error.split(':').pop())
-            ok = false
+          const data = item.json.data
+          const sitemapIndexSitemapJSON = parseXML(data)
+          if (!sitemapIndexSitemapJSON) {
+            updateStatus('Invalid XML: ' + item.url)
+            console.log(item.url);
+            console.log(data);
           }
+          const pathsArrayNext = getURLsFromSitemap(sitemapIndexSitemapJSON)
+          pathsArray = pathsArray.concat(pathsArrayNext)
         });
-        if (ok) {
-          gotData(pathsArray)
-        }
+        gotData(pathsArray)
       }
 
       async function getData(url) {
-        updateStatus('Fetching sitemap')
-        var sitemapURL = fetcherURL + url + '/sitemap.xml'
+        var sitemapURL = url + '/sitemap.xml'
+        var fetcherSitemapURL = fetcherURL + sitemapURL
+        updateStatus('Fetching sitemap: ' + sitemapURL)
         var pathsArray
-        const serverResponceForSitemap = await (await fetch(sitemapURL)).json()
+        const serverResponceForSitemap = await (await fetch(fetcherSitemapURL)).json()
         var sitemapJSON
         if (serverResponceForSitemap.ok) {
           sitemapJSON = parseXML(serverResponceForSitemap.data)
           if (sitemapJSON.urlset) {
+            updateStatus('Sitemap is OK')
             var pathsArray = getURLsFromSitemap(sitemapJSON)
             gotData(pathsArray)
           } else if (sitemapJSON.sitemapindex) {
+            updateStatus('It is not a sitemap but a sitemap index')
             getSitemapIndexSitemaps(sitemapJSON)
           }
         } else {
-          updateStatus(`Fetching sitemap index. Sitemap error: ${serverResponceForSitemap.error.split(':').pop()}`)
-          var sitemapIndexURL = fetcherURL + url + '/sitemap_index.xml'
-          const serverResponceForSitemapIndex = await (await fetch(sitemapIndexURL)).json()
+          updateStatus('Sitemap error: ' + serverResponceForSitemap.error.split(':').pop())
+          var sitemapIndexURL = url + '/sitemap_index.xml'
+          var fetcherSitemapIndexURL = fetcherURL + sitemapIndexURL
+          updateStatus('Trying to fetch sitemap index: ' + sitemapIndexURL)
+          const serverResponceForSitemapIndex = await (await fetch(fetcherSitemapIndexURL)).json()
           if (serverResponceForSitemapIndex.ok) {
+            updateStatus('Sitemap index found')
             const sitemapIndexJSON = parseXML(serverResponceForSitemapIndex.data)
             getSitemapIndexSitemaps(sitemapIndexJSON)
           } else {
-            updateStatus(serverResponceForSitemapIndex.error.split(':').pop())
+            updateStatus('Sitemap index error: ' + serverResponceForSitemapIndex.error.split(':').pop())
+            updateStatus('No sitemap or sitemap index found')
           }
 
         }
       }
 
       function parseXML(xml) {
-        var json
+        var json = null
         try {
           json = xml2js(xml, {
             compact: true
@@ -279,6 +327,15 @@
       }
 
       function getURLsFromSitemap(xmlJSON) {
+        if (!xmlJSON) {
+          return []
+        }
+        if (!("url" in xmlJSON.urlset)) {
+          return []
+        }
+        if (!Array.isArray(xmlJSON.urlset.url)) {
+          xmlJSON.urlset.url = [xmlJSON.urlset.url]
+        }
         var pathsArray = xmlJSON.urlset.url.map(el => el.loc._text)
         pathsArray = pathsArray.map(path => {
           return path
@@ -295,11 +352,11 @@
         updateStatus('Building tree from URLs')
         var tree = buildTreeFromPaths(pathsArray)
         tree.name = displayURL
-        updateStatus('Drawing tree chart')
         created3(tree)
         window.localStorage.setItem(formatedURL, JSON.stringify(tree))
         document.title = displayURL + ' - Sitemap Tree Chart'
-        updateStatus('Using fetched sitemap. ' + (tree.urlCount ? ' ' + tree.urlCount + ' URLs.' : ''))
+        updateStatus('Using fetched sitemap')
+        updateStatus(tree.urlCount + ' URLs')
       }
 
     }
@@ -377,6 +434,8 @@
     }
 
     function created3(data) {
+      updateStatus('Drawing tree chart')
+
       const width = 900
       const dy = 400
       const dx = 10
