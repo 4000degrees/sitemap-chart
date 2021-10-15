@@ -406,6 +406,7 @@
     var floaterLastElement = null
     floater.addEventListener('mouseover', e => {
       hideFloater = false
+      floaterLastElement = null
     })
     document.body.addEventListener('mouseover', e => {
       hideFloater = true
@@ -416,12 +417,11 @@
         }
       }, 400)
     }, true)
-
     function displayFloater(e, d) {
       floaterLastElement = d
+      hideFloater = false
       setTimeout(() => {
-        if (floaterLastElement == d && hideFloater) {
-          hideFloater = false
+        if (floaterLastElement == d && !hideFloater) {
           floater.style.left = e.target.getBoundingClientRect().x + 'px'
           floater.style.top = e.target.getBoundingClientRect().y + 'px'
           var node = d;
@@ -434,7 +434,6 @@
           floater.innerHTML = `<a target='_blank' href='${url}'>${url}</a>`
         }
       }, 1000)
-
     }
 
     function created3(data) {
