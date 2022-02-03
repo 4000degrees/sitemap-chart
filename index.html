@@ -417,6 +417,7 @@
         }
       }, 400)
     }, true)
+
     function displayFloater(e, d) {
       floaterLastElement = d
       hideFloater = false
@@ -667,16 +668,15 @@
       }
 
       window['unfoldAll'] = function unfoldAll() {
-        expand(root);
+        root.children.forEach(expand);
         update(root);
       }
 
       window['foldAll'] = function foldAll() {
         root.children.forEach(collapse);
-        // collapse(root);
+        resetZoom()
         update(root);
       }
-
 
       update()
       container.appendChild(svg.node())
